@@ -10,6 +10,11 @@
         "type": "string",
         "required": true,
         "default": "Example Dynamic Platform"
+      },
+      "token": {
+        "title": "Token",
+        "type": "string",
+        "required": true
       }
     }
   }
