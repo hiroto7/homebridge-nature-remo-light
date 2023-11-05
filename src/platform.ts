@@ -6,10 +6,10 @@ import {
   PlatformConfig,
   Service,
   Characteristic,
-} from 'homebridge';
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { ExamplePlatformAccessory } from './platformAccessory';
-import { Appliance } from './types';
+} from "homebridge";
+import { PLATFORM_NAME, PLUGIN_NAME } from "./settings";
+import { ExamplePlatformAccessory } from "./platformAccessory";
+import { Appliance } from "./types";
 
 /**
  * HomebridgePlatform
@@ -27,16 +27,16 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
-    public readonly api: API
+    public readonly api: API,
   ) {
-    this.log.debug('Finished initializing platform:', this.config.name);
+    this.log.debug("Finished initializing platform:", this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
     // in order to ensure they weren't added to homebridge already. This event can also be used
     // to start discovery of new accessories.
-    this.api.on('didFinishLaunching', async () => {
-      log.debug('Executed didFinishLaunching callback');
+    this.api.on("didFinishLaunching", async () => {
+      log.debug("Executed didFinishLaunching callback");
       // run the method to discover / register your devices as accessories
       await this.discoverDevices();
     });
@@ -47,7 +47,7 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
    * It should be used to setup event handlers for characteristics and update respective values.
    */
   configureAccessory(accessory: PlatformAccessory<Appliance>) {
-    this.log.info('Loading accessory from cache:', accessory.displayName);
+    this.log.info("Loading accessory from cache:", accessory.displayName);
 
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
@@ -59,8 +59,8 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
-    const response = await fetch('https://api.nature.global/1/appliances', {
-      headers: { Authorization: `Bearer ${this.config['token']}` },
+    const response = await fetch("https://api.nature.global/1/appliances", {
+      headers: { Authorization: `Bearer ${this.config["token"]}` },
     });
     const json = await response.json();
 
@@ -69,7 +69,7 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
     }
 
     const appliances = (json as Appliance[]).filter(
-      ({ type, image }) => type === 'LIGHT' || image === 'ico_light'
+      ({ type, image }) => type === "LIGHT" || image === "ico_light",
     );
 
     // loop over the discovered devices and register each one if it has not already been registered
@@ -82,14 +82,14 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
       const existingAccessory = this.accessories.find(
-        (accessory) => accessory.UUID === uuid
+        (accessory) => accessory.UUID === uuid,
       );
 
       if (existingAccessory) {
         // the accessory already exists
         this.log.info(
-          'Restoring existing accessory from cache:',
-          existingAccessory.displayName
+          "Restoring existing accessory from cache:",
+          existingAccessory.displayName,
         );
 
         // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
@@ -106,12 +106,12 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
         // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', appliance.nickname);
+        this.log.info("Adding new accessory:", appliance.nickname);
 
         // create a new accessory
         const accessory = new this.api.platformAccessory<Appliance>(
           appliance.nickname,
-          uuid
+          uuid,
         );
 
         // store a copy of the device object in the `accessory.context`

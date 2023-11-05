@@ -1,6 +1,6 @@
-import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
-import { ExampleHomebridgePlatform } from './platform';
-import { Appliance, LightState } from './types';
+import { Service, PlatformAccessory, CharacteristicValue } from "homebridge";
+import { ExampleHomebridgePlatform } from "./platform";
+import { Appliance, LightState } from "./types";
 
 /**
  * Platform Accessory
@@ -21,7 +21,7 @@ export class ExamplePlatformAccessory {
 
   constructor(
     private readonly platform: ExampleHomebridgePlatform,
-    private readonly accessory: PlatformAccessory<Appliance>
+    private readonly accessory: PlatformAccessory<Appliance>,
   ) {
     // set accessory information
     if (accessory.context.model) {
@@ -29,15 +29,15 @@ export class ExamplePlatformAccessory {
         .getService(platform.Service.AccessoryInformation)!
         .setCharacteristic(
           platform.Characteristic.Manufacturer,
-          accessory.context.model.manufacturer
+          accessory.context.model.manufacturer,
         )
         .setCharacteristic(
           platform.Characteristic.Model,
-          accessory.context.model.name
+          accessory.context.model.name,
         )
         .setCharacteristic(
           platform.Characteristic.SerialNumber,
-          accessory.context.model.id
+          accessory.context.model.id,
         );
     }
 
@@ -51,7 +51,7 @@ export class ExamplePlatformAccessory {
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(
       platform.Characteristic.Name,
-      accessory.context.nickname
+      accessory.context.nickname,
     );
 
     // each service must implement at-minimum the "required characteristics" for the given service type
@@ -78,17 +78,17 @@ export class ExamplePlatformAccessory {
     this.exampleStates.On = value as boolean;
 
     const headers = {
-      Authorization: `Bearer ${this.platform.config['token']}`,
+      Authorization: `Bearer ${this.platform.config["token"]}`,
     };
 
     if (this.accessory.context.light) {
       const response = await fetch(
         `https://api.nature.global/1/appliances/${this.accessory.context.id}/light`,
         {
-          method: 'POST',
+          method: "POST",
           headers,
-          body: new URLSearchParams({ button: value ? 'on' : 'off' }),
-        }
+          body: new URLSearchParams({ button: value ? "on" : "off" }),
+        },
       );
 
       if (!response.ok) {
@@ -99,12 +99,12 @@ export class ExamplePlatformAccessory {
       this.accessory.context.light.state = state;
     } else {
       const signal = this.accessory.context.signals.find(
-        ({ image }) => image === (value ? 'ico_on' : 'ico_off')
+        ({ image }) => image === (value ? "ico_on" : "ico_off"),
       );
 
       const response = await fetch(
         `https://api.nature.global/1/signals/${signal?.id}/send`,
-        { method: 'POST', headers }
+        { method: "POST", headers },
       );
 
       if (!response.ok) {
@@ -112,7 +112,7 @@ export class ExamplePlatformAccessory {
       }
     }
 
-    this.platform.log.debug('Set Characteristic On ->', value);
+    this.platform.log.debug("Set Characteristic On ->", value);
   }
 
   /**
@@ -130,9 +130,9 @@ export class ExamplePlatformAccessory {
    */
   async getOn(): Promise<CharacteristicValue> {
     // implement your own code to check if the device is on
-    const isOn = this.accessory.context.light?.state.power === 'on';
+    const isOn = this.accessory.context.light?.state.power === "on";
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+    this.platform.log.debug("Get Characteristic On ->", isOn);
 
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -148,6 +148,6 @@ export class ExamplePlatformAccessory {
     // implement your own code to set the brightness
     this.exampleStates.Brightness = value as number;
 
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
+    this.platform.log.debug("Set Characteristic Brightness -> ", value);
   }
 }

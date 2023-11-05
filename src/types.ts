@@ -26,5 +26,5 @@ export interface Light {
 
 export interface LightState {
   brightness: string;
-  power: 'off' | 'on';
+  power: "off" | "on";
 }
