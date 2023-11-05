@@ -10,14 +10,7 @@ import { Appliance, LightState } from "./types";
 export class ExamplePlatformAccessory {
   private service: Service;
 
-  /**
-   * These are just used to create a working example
-   * You should implement your own code to track the state of your accessory
-   */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
-  };
+  private isOn = false;
 
   constructor(
     private readonly platform: ExampleHomebridgePlatform,
@@ -62,11 +55,6 @@ export class ExamplePlatformAccessory {
       .getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setOn.bind(this)) // SET - bind to the `setOn` method below
       .onGet(this.getOn.bind(this)); // GET - bind to the `getOn` method below
-
-    // register handlers for the Brightness Characteristic
-    this.service
-      .getCharacteristic(this.platform.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this)); // SET - bind to the 'setBrightness` method below
   }
 
   /**
@@ -74,9 +62,6 @@ export class ExamplePlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async setOn(value: CharacteristicValue) {
-    // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
-
     const headers = {
       Authorization: `Bearer ${this.platform.config["token"]}`,
     };
@@ -110,6 +95,8 @@ export class ExamplePlatformAccessory {
       if (!response.ok) {
         throw await response.json();
       }
+
+      this.isOn = value as boolean;
     }
 
     this.platform.log.debug("Set Characteristic On ->", value);
@@ -130,7 +117,9 @@ export class ExamplePlatformAccessory {
    */
   async getOn(): Promise<CharacteristicValue> {
     // implement your own code to check if the device is on
-    const isOn = this.accessory.context.light?.state.power === "on";
+    const isOn = this.accessory.context.light
+      ? this.accessory.context.light.state.power === "on"
+      : this.isOn;
 
     this.platform.log.debug("Get Characteristic On ->", isOn);
 
@@ -138,16 +127,5 @@ export class ExamplePlatformAccessory {
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
     return isOn;
-  }
-
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, changing the Brightness
-   */
-  async setBrightness(value: CharacteristicValue) {
-    // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
-
-    this.platform.log.debug("Set Characteristic Brightness -> ", value);
   }
 }
