@@ -22,7 +22,7 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
     this.api.hap.Characteristic;
 
   // this is used to track restored cached accessories
-  public readonly accessories: PlatformAccessory<Appliance>[] = [];
+  public readonly accessories: PlatformAccessory[] = [];
 
   constructor(
     public readonly log: Logger,
@@ -92,40 +92,40 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
           existingAccessory.displayName,
         );
 
-        // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
-
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, existingAccessory);
-
-        // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-        // remove platform accessories when no longer present
-        // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-        // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+        new ExamplePlatformAccessory(this, existingAccessory, appliance);
       } else {
         // the accessory does not yet exist, so we need to create it
         this.log.info("Adding new accessory:", appliance.nickname);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory<Appliance>(
+        const accessory = new this.api.platformAccessory(
           appliance.nickname,
           uuid,
         );
 
-        // store a copy of the device object in the `accessory.context`
-        // the `context` property can be used to store any data about the accessory you may need
-        accessory.context = appliance;
-
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, accessory);
+        new ExamplePlatformAccessory(this, accessory, appliance);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
           accessory,
         ]);
+      }
+    }
+
+    for (const existingAccessory of this.accessories) {
+      const uuids = appliances.map(({ id }) => this.api.hap.uuid.generate(id));
+      if (!uuids.includes(existingAccessory.UUID)) {
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+          existingAccessory,
+        ]);
+        this.log.info(
+          "Removing existing accessory from cache:",
+          existingAccessory.displayName,
+        );
       }
     }
   }

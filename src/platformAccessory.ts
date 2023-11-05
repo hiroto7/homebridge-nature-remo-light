@@ -10,27 +10,23 @@ import { Appliance, LightState } from "./types";
 export class ExamplePlatformAccessory {
   private service: Service;
 
-  private isOn = false;
-
   constructor(
     private readonly platform: ExampleHomebridgePlatform,
-    private readonly accessory: PlatformAccessory<Appliance>,
+    private readonly accessory: PlatformAccessory<{ isOn?: boolean }>,
+    private readonly appliance: Appliance,
   ) {
     // set accessory information
-    if (accessory.context.model) {
+    if (appliance.model) {
       accessory
         .getService(platform.Service.AccessoryInformation)!
         .setCharacteristic(
           platform.Characteristic.Manufacturer,
-          accessory.context.model.manufacturer,
+          appliance.model.manufacturer,
         )
-        .setCharacteristic(
-          platform.Characteristic.Model,
-          accessory.context.model.name,
-        )
+        .setCharacteristic(platform.Characteristic.Model, appliance.model.name)
         .setCharacteristic(
           platform.Characteristic.SerialNumber,
-          accessory.context.model.id,
+          appliance.model.id,
         );
     }
 
@@ -40,11 +36,9 @@ export class ExamplePlatformAccessory {
       accessory.getService(this.platform.Service.Lightbulb) ||
       accessory.addService(this.platform.Service.Lightbulb);
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(
       platform.Characteristic.Name,
-      accessory.context.nickname,
+      appliance.nickname,
     );
 
     // each service must implement at-minimum the "required characteristics" for the given service type
@@ -66,9 +60,9 @@ export class ExamplePlatformAccessory {
       Authorization: `Bearer ${this.platform.config["token"]}`,
     };
 
-    if (this.accessory.context.light) {
+    if (this.appliance.light) {
       const response = await fetch(
-        `https://api.nature.global/1/appliances/${this.accessory.context.id}/light`,
+        `https://api.nature.global/1/appliances/${this.appliance.id}/light`,
         {
           method: "POST",
           headers,
@@ -80,10 +74,10 @@ export class ExamplePlatformAccessory {
         throw await response.json();
       }
 
-      const state = (await response.json()) as LightState;
-      this.accessory.context.light.state = state;
+      this.appliance.light.state = (await response.json()) as LightState;
+      delete this.accessory.context.isOn;
     } else {
-      const signal = this.accessory.context.signals.find(
+      const signal = this.appliance.signals.find(
         ({ image }) => image === (value ? "ico_on" : "ico_off"),
       );
 
@@ -96,7 +90,7 @@ export class ExamplePlatformAccessory {
         throw await response.json();
       }
 
-      this.isOn = value as boolean;
+      this.accessory.context.isOn = value as boolean;
     }
 
     this.platform.log.debug("Set Characteristic On ->", value);
@@ -117,9 +111,9 @@ export class ExamplePlatformAccessory {
    */
   async getOn(): Promise<CharacteristicValue> {
     // implement your own code to check if the device is on
-    const isOn = this.accessory.context.light
-      ? this.accessory.context.light.state.power === "on"
-      : this.isOn;
+    const isOn = this.appliance.light
+      ? this.appliance.light.state.power === "on"
+      : this.accessory.context.isOn ?? false;
 
     this.platform.log.debug("Get Characteristic On ->", isOn);
 
