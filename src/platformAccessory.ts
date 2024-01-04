@@ -2,6 +2,9 @@ import { Service, PlatformAccessory, CharacteristicValue } from "homebridge";
 import { ExampleHomebridgePlatform } from "./platform";
 import { Appliance, LightState } from "./types";
 
+const MAX_BRIGHTNESS = 100;
+const MAX_BRIGHTNESS_LEVEL = 9;
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -9,6 +12,10 @@ import { Appliance, LightState } from "./types";
  */
 export class ExamplePlatformAccessory {
   private service: Service;
+
+  #brightness: number = 100;
+  #updating: boolean = false;
+  #target: number = this.#brightness;
 
   constructor(
     private readonly platform: ExampleHomebridgePlatform,
@@ -49,6 +56,38 @@ export class ExamplePlatformAccessory {
       .getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setOn.bind(this)) // SET - bind to the `setOn` method below
       .onGet(this.getOn.bind(this)); // GET - bind to the `getOn` method below
+
+    this.service
+      .getCharacteristic(this.platform.Characteristic.Brightness)
+      .onSet(this.#setBrightness.bind(this))
+      .onGet(this.#getBrightness.bind(this));
+
+    this.service
+      .getCharacteristic(this.platform.Characteristic.ColorTemperature)
+      .onSet((v) => console.log("ColorTemperature", v))
+      .onGet(() => 300);
+  }
+
+  get #headers() {
+    return { Authorization: `Bearer ${this.platform.config["token"]}` };
+  }
+
+  async #postLightButton(button: "on" | "off" | "bright-up" | "bright-down") {
+    this.platform.log.debug(button);
+    const response = await fetch(
+      `https://api.nature.global/1/appliances/${this.appliance.id}/light`,
+      {
+        method: "POST",
+        headers: this.#headers,
+        body: new URLSearchParams({ button }),
+      },
+    );
+
+    if (!response.ok) {
+      throw await response.json();
+    }
+
+    return (await response.json()) as LightState;
   }
 
   /**
@@ -56,25 +95,10 @@ export class ExamplePlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async setOn(value: CharacteristicValue) {
-    const headers = {
-      Authorization: `Bearer ${this.platform.config["token"]}`,
-    };
-
     if (this.appliance.light) {
-      const response = await fetch(
-        `https://api.nature.global/1/appliances/${this.appliance.id}/light`,
-        {
-          method: "POST",
-          headers,
-          body: new URLSearchParams({ button: value ? "on" : "off" }),
-        },
+      this.appliance.light.state = await this.#postLightButton(
+        value ? "on" : "off",
       );
-
-      if (!response.ok) {
-        throw await response.json();
-      }
-
-      this.appliance.light.state = (await response.json()) as LightState;
       delete this.accessory.context.isOn;
     } else {
       const signal = this.appliance.signals.find(
@@ -83,7 +107,7 @@ export class ExamplePlatformAccessory {
 
       const response = await fetch(
         `https://api.nature.global/1/signals/${signal?.id}/send`,
-        { method: "POST", headers },
+        { method: "POST", headers: this.#headers },
       );
 
       if (!response.ok) {
@@ -121,5 +145,50 @@ export class ExamplePlatformAccessory {
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
     return isOn;
+  }
+
+  async #setBrightness(value: CharacteristicValue) {
+    console.log("Brightness", value);
+    this.#target = value as number;
+    this.update();
+  }
+
+  async update() {
+    if (this.#updating) {
+      return;
+    }
+
+    this.#updating = true;
+
+    try {
+      for (;;) {
+        const currentLevel = Math.floor(
+          (this.#brightness * MAX_BRIGHTNESS_LEVEL) / MAX_BRIGHTNESS,
+        );
+        const targetLevel = Math.floor(
+          (this.#target * MAX_BRIGHTNESS_LEVEL) / MAX_BRIGHTNESS,
+        );
+
+        const valueDiff = this.#target - this.#brightness;
+        const levelDiff = targetLevel - currentLevel;
+
+        if (levelDiff > 0) {
+          await this.#postLightButton("bright-up");
+          this.#brightness += Math.round(valueDiff / levelDiff);
+        } else if (levelDiff < 0) {
+          await this.#postLightButton("bright-down");
+          this.#brightness -= Math.round(valueDiff / levelDiff);
+        } else {
+          this.#brightness = this.#target;
+          break;
+        }
+      }
+    } finally {
+      this.#updating = false;
+    }
+  }
+
+  async #getBrightness() {
+    return this.#brightness;
   }
 }
