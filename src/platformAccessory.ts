@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from "homebridge";
 import { ExampleHomebridgePlatform } from "./platform";
-import { Appliance, LightState } from "./types";
+import { Appliance, LightButtonName, LightState } from "./types";
 
 const MAX_BRIGHTNESS = 100;
 const MAX_BRIGHTNESS_LEVEL = 9;
@@ -72,7 +72,7 @@ export class ExamplePlatformAccessory {
     return { Authorization: `Bearer ${this.platform.config["token"]}` };
   }
 
-  async #postLightButton(button: "on" | "off" | "bright-up" | "bright-down") {
+  async #postLightButton(button: LightButtonName) {
     this.platform.log.debug(button);
     const response = await fetch(
       `https://api.nature.global/1/appliances/${this.appliance.id}/light`,
